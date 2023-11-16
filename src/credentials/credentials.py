@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from cryptography.fernet import Fernet
+from getpass import getpass
 
 class CredentialsManager:
 
@@ -10,8 +11,21 @@ class CredentialsManager:
         self.credentials_file_path = credentials_file_path
         self.fernet = Fernet(os.environ.get('CREDENTIALS_ENCRYPTION_KEY'))
 
-    def store_credentials(self, credentials):
+    def store_credentials(self):
         try:
+            # Prompt user for credentials
+            aws_account_id = input("Enter your AWS account ID: ")
+            aws_access_key_id = input("Enter your AWS access key ID: ")
+            aws_secret_access_key = getpass("Enter your AWS secret access key: ")
+
+            # Create a dictionary of credentials
+            credentials = {
+                'aws_account_id': aws_account_id,
+                'aws_access_key_id': aws_access_key_id,
+                'aws_secret_access_key': aws_secret_access_key
+            }
+
+            # Encrypt and store credentials to the file
             encrypted_credentials = self.fernet.encrypt(json.dumps(credentials).encode('utf-8'))
             with open(self.credentials_file_path, 'wb') as credentials_file:
                 credentials_file.write(encrypted_credentials)
@@ -21,8 +35,11 @@ class CredentialsManager:
 
     def retrieve_credentials(self):
         try:
+            # Read encrypted credentials from the file
             with open(self.credentials_file_path, 'rb') as credentials_file:
                 encrypted_credentials = credentials_file.read()
+
+            # Decrypt and return credentials
             credentials = json.loads(self.fernet.decrypt(encrypted_credentials).decode('utf-8'))
             self.logger.info('Credentials retrieved successfully.')
             return credentials
@@ -32,19 +49,3 @@ class CredentialsManager:
 
 if __name__ == '__main__':
     # Replace with your actual credentials_file_path
-    credentials_file_path = 'credentials.json'
-
-    # Create an instance of the CredentialsManager class
-    credentials_manager = CredentialsManager(credentials_file_path)
-
-    # Example usage: Store credentials
-    credentials = {
-        'aws_account_id': 'YOUR_AWS_ACCOUNT_ID',
-        'aws_access_key_id': 'YOUR_AWS_ACCESS_KEY_ID',
-        'aws_secret_access_key': 'YOUR_AWS_SECRET_ACCESS_KEY'
-    }
-    credentials_manager.store_credentials(credentials)
-
-    # Example usage: Retrieve credentials
-    retrieved_credentials = credentials_manager.retrieve_credentials()
-    print('Retrieved credentials:', retrieved_credentials)
